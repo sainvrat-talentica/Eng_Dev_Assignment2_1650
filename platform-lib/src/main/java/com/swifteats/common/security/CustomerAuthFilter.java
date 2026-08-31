@@ -1,5 +1,7 @@
 package com.swifteats.common.security;
 
+import com.swifteats.common.runtime.ServiceName;
+import com.swifteats.common.runtime.ServiceScope;
 import com.swifteats.common.domain.CustomerStatus;
 import com.swifteats.order.repository.CustomerRepository;
 import jakarta.servlet.FilterChain;
@@ -19,6 +21,7 @@ import java.util.regex.Pattern;
 
 @Component
 @Order(20)
+@ServiceScope({ServiceName.BACKEND, ServiceName.ORDER})
 public class CustomerAuthFilter extends OncePerRequestFilter {
 
     private static final String CUSTOMER_ID_HEADER = "X-Customer-Id";

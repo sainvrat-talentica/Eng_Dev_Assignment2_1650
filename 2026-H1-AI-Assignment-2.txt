@@ -28,9 +28,12 @@ Sample Data Set :
 	third-assignment-sample-data-set
 	
 Expected Output :
-	* A word document with write up about how this problem can be solved. A simple diagram can be added to explain better.
-	* A simple sample program which can aggregate the data and demo the outcome. Need not to be a UI or full fledge backend service.
-	* Demo this working program from your local system with example use cases. Record a video with your voice explaining the demo.
+	* A word document with write up about how this problem can be solved. 
+		A simple diagram can be added to explain better.
+	* A simple sample program which can aggregate the data and demo the outcome. 
+		Need not to be a UI or full fledge backend service.
+	* Demo this working program from your local system with example use cases. 
+		Record a video with your voice explaining the demo.
 	* Record output for sample use cases and save into a doc and share.
 	* Email the output details : A Github repo link, a folder link containing the doc and recording.
 	

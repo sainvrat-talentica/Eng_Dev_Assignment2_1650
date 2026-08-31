@@ -1,5 +1,0 @@
-spring:
-  application:
-    name: swifteats-api
-  config:
-    import: optional:classpath:application-platform-defaults.yml

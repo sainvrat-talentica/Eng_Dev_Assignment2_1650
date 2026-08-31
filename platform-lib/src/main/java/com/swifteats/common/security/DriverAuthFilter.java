@@ -1,5 +1,7 @@
 package com.swifteats.common.security;
 
+import com.swifteats.common.runtime.ServiceName;
+import com.swifteats.common.runtime.ServiceScope;
 import com.swifteats.tracking.repository.DriverRepository;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -18,6 +20,7 @@ import java.util.regex.Pattern;
 
 @Component
 @Order(21)
+@ServiceScope(ServiceName.BACKEND)
 public class DriverAuthFilter extends OncePerRequestFilter {
 
     private static final String DRIVER_TOKEN_HEADER = "X-Driver-Api-Key";

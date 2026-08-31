@@ -5,11 +5,20 @@ spring:
     import: optional:classpath:application-platform-defaults.yml
   flyway:
     enabled: false
+  jpa:
+    hibernate:
+      ddl-auto: none
+  autoconfigure:
+    exclude:
+      - org.springframework.boot.autoconfigure.orm.jpa.HibernateJpaAutoConfiguration
+      - org.springframework.boot.autoconfigure.data.jpa.JpaRepositoriesAutoConfiguration
 
 server:
   port: 8080
 
 swifteats:
+  jpa:
+    enabled: false
   service:
     name: ANALYTICS
   services:
