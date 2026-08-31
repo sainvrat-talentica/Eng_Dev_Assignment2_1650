@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>DriverAssignmentService.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">SwiftEats Platform Library</a> &gt; <a href="index.source.html" class="el_package">com.swifteats.tracking.service</a> &gt; <span class="el_source">DriverAssignmentService.java</span></div><h1>DriverAssignmentService.java</h1><pre class="source lang-java linenums">package com.swifteats.tracking.service;
+
+import com.swifteats.common.runtime.ServiceName;
+import com.swifteats.common.runtime.ServiceScope;
+
+import com.swifteats.common.domain.DriverStatus;
+import com.swifteats.tracking.exception.NoDriverAvailableException;
+import com.swifteats.tracking.entity.Driver;
+import com.swifteats.tracking.repository.DriverRepository;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.util.UUID;
+
+@Service
+@ServiceScope({ServiceName.ORDER, ServiceName.BACKEND})
+public class DriverAssignmentService {
+
+    private final DriverRepository driverRepository;
+    private final DriverLocationCacheService locationCacheService;
+
+    public DriverAssignmentService(
+            DriverRepository driverRepository,
+<span class="fc" id="L24">            DriverLocationCacheService locationCacheService) {</span>
+<span class="fc" id="L25">        this.driverRepository = driverRepository;</span>
+<span class="fc" id="L26">        this.locationCacheService = locationCacheService;</span>
+<span class="fc" id="L27">    }</span>
+
+    @Transactional
+    public UUID assignDriver(UUID orderId) {
+<span class="fc" id="L31">        Driver driver = driverRepository.findFirstByStatusOrderByCreatedAtAsc(DriverStatus.AVAILABLE)</span>
+<span class="fc" id="L32">                .orElseThrow(NoDriverAvailableException::new);</span>
+<span class="fc" id="L33">        driver.setStatus(DriverStatus.ON_DELIVERY);</span>
+<span class="fc" id="L34">        driver.setCurrentOrderId(orderId);</span>
+<span class="fc" id="L35">        driverRepository.save(driver);</span>
+<span class="fc" id="L36">        locationCacheService.cacheOrderDriver(orderId, driver.getId());</span>
+<span class="fc" id="L37">        return driver.getId();</span>
+    }
+
+    @Transactional
+    public void releaseDriver(UUID driverId) {
+<span class="fc" id="L42">        driverRepository.findById(driverId).ifPresent(driver -&gt; {</span>
+<span class="fc" id="L43">            driver.setStatus(DriverStatus.AVAILABLE);</span>
+<span class="fc" id="L44">            driver.setCurrentOrderId(null);</span>
+<span class="fc" id="L45">            driverRepository.save(driver);</span>
+<span class="fc" id="L46">        });</span>
+<span class="fc" id="L47">    }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.15.202606040825</span></div></body></html>

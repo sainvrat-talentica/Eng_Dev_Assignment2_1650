@@ -1,0 +1,32 @@
+{
+    "narrative": "Between 2025-08-01T00:00:00Z and 2025-09-01T00:00:00Z, festival/holiday periods saw 187 failure events. Top correlated reason: Weather disruption. Average warehouse capacity during these events was constrained \u2014 plan buffer staffing and driver capacity.",
+    "recommendations": [
+        "Pre-scale warehouse capacity by 15% and add a 15% driver buffer before festival peaks.",
+        "Add packing staff at the warehouse during peak hours.",
+        "Review end-to-end SLA checkpoints from kitchen dispatch to last-mile handoff.",
+        "Mandatory address pin validation before dispatch.",
+        "Pause SLA clock during severe weather and pre-position drivers beforehand.",
+        "Enable real-time inventory sync and low-stock alerts at affected warehouses."
+    ],
+    "evidence": {
+        "failureReasons": {
+            "Warehouse delay": 40,
+            "Stockout": 46,
+            "Weather disruption": 43,
+            "Traffic congestion": 35,
+            "Incorrect address": 23
+        },
+        "correlatedRules": [
+            "FESTIVAL_VOLUME",
+            "WAREHOUSE_OPS",
+            "SLA_BREACH",
+            "ADDRESS_MISMATCH",
+            "WEATHER_IMPACT",
+            "STOCKOUT_WAREHOUSE"
+        ],
+        "eventBreakdown": {
+            "Festival": 399,
+            "Holiday": 479
+        }
+    }
+}

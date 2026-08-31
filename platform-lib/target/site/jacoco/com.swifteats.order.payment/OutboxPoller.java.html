@@ -1,0 +1,92 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>OutboxPoller.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">SwiftEats Platform Library</a> &gt; <a href="index.source.html" class="el_package">com.swifteats.order.payment</a> &gt; <span class="el_source">OutboxPoller.java</span></div><h1>OutboxPoller.java</h1><pre class="source lang-java linenums">package com.swifteats.order.payment;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.swifteats.common.runtime.ServiceName;
+import com.swifteats.common.runtime.ServiceScope;
+import com.swifteats.common.security.InternalServiceAuthSupport;
+import com.swifteats.gateway.config.ServiceRegistryProperties;
+import com.swifteats.order.config.PaymentMessagingConfig;
+import com.swifteats.order.config.PaymentProperties;
+import com.swifteats.order.dto.PaymentProcessMessage;
+import com.swifteats.order.entity.OutboxEvent;
+import com.swifteats.order.repository.OutboxEventRepository;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.amqp.rabbit.core.RabbitTemplate;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.scheduling.annotation.Scheduled;
+import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.client.RestClient;
+
+import java.time.Instant;
+import java.util.List;
+
+@Component
+@ServiceScope(ServiceName.ORDER)
+public class OutboxPoller {
+
+<span class="fc" id="L30">    private static final Logger log = LoggerFactory.getLogger(OutboxPoller.class);</span>
+
+    private final OutboxEventRepository outboxEventRepository;
+    private final ObjectMapper objectMapper;
+    private final PaymentProperties paymentProperties;
+    private final ServiceRegistryProperties serviceRegistry;
+    private final RestClient restClient;
+    private final InternalServiceAuthSupport internalServiceAuthSupport;
+    private final RabbitTemplate rabbitTemplate;
+
+    public OutboxPoller(
+            OutboxEventRepository outboxEventRepository,
+            ObjectMapper objectMapper,
+            PaymentProperties paymentProperties,
+            ServiceRegistryProperties serviceRegistry,
+            RestClient.Builder restClientBuilder,
+            InternalServiceAuthSupport internalServiceAuthSupport,
+<span class="fc" id="L47">            @Autowired(required = false) RabbitTemplate rabbitTemplate) {</span>
+<span class="fc" id="L48">        this.outboxEventRepository = outboxEventRepository;</span>
+<span class="fc" id="L49">        this.objectMapper = objectMapper;</span>
+<span class="fc" id="L50">        this.paymentProperties = paymentProperties;</span>
+<span class="fc" id="L51">        this.serviceRegistry = serviceRegistry;</span>
+<span class="fc" id="L52">        this.restClient = restClientBuilder.build();</span>
+<span class="fc" id="L53">        this.internalServiceAuthSupport = internalServiceAuthSupport;</span>
+<span class="fc" id="L54">        this.rabbitTemplate = rabbitTemplate;</span>
+<span class="fc" id="L55">    }</span>
+
+    @Scheduled(fixedDelayString = &quot;${swifteats.outbox.poll-interval-ms:1000}&quot;)
+    @Transactional
+    public void pollAndPublish() {
+<span class="fc" id="L60">        List&lt;OutboxEvent&gt; batch = outboxEventRepository.findUnpublished(PageRequest.of(0, 100));</span>
+<span class="fc bfc" id="L61" title="All 2 branches covered.">        for (OutboxEvent event : batch) {</span>
+            try {
+<span class="fc" id="L63">                dispatch(event);</span>
+<span class="fc" id="L64">                event.setPublishedAt(Instant.now());</span>
+<span class="nc" id="L65">            } catch (Exception ex) {</span>
+<span class="nc" id="L66">                log.warn(&quot;Failed to publish outbox event {}: {}&quot;, event.getId(), ex.getMessage());</span>
+<span class="fc" id="L67">            }</span>
+<span class="fc" id="L68">        }</span>
+<span class="fc" id="L69">    }</span>
+
+    private void dispatch(OutboxEvent event) throws Exception {
+<span class="fc bfc" id="L72" title="All 2 branches covered.">        if (&quot;PaymentProcess&quot;.equals(event.getEventType())) {</span>
+<span class="fc" id="L73">            PaymentProcessMessage message = objectMapper.readValue(event.getPayload(), PaymentProcessMessage.class);</span>
+<span class="pc bpc" id="L74" title="2 of 4 branches missed.">            if (paymentProperties.isMessagingEnabled() &amp;&amp; rabbitTemplate != null) {</span>
+<span class="fc" id="L75">                rabbitTemplate.convertAndSend(</span>
+                        PaymentMessagingConfig.PAYMENT_EXCHANGE,
+                        PaymentMessagingConfig.PAYMENT_ROUTING_KEY,
+                        message);
+            } else {
+<span class="nc" id="L80">                String baseUrl = serviceRegistry.getPayment().getBaseUrl();</span>
+<span class="nc" id="L81">                internalServiceAuthSupport.authorize(restClient.post()</span>
+<span class="nc" id="L82">                        .uri(baseUrl + &quot;/internal/v1/payments/process&quot;)</span>
+<span class="nc" id="L83">                        .body(message))</span>
+<span class="nc" id="L84">                        .retrieve()</span>
+<span class="nc" id="L85">                        .toBodilessEntity();</span>
+            }
+<span class="fc" id="L87">            return;</span>
+        }
+<span class="fc" id="L89">        log.debug(&quot;Outbox event {} ({}) recorded; no external publisher configured&quot;, event.getId(), event.getEventType());</span>
+<span class="fc" id="L90">    }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.15.202606040825</span></div></body></html>

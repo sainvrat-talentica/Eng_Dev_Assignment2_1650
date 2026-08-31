@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>AdminApiKeyFilter.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">SwiftEats Platform Library</a> &gt; <a href="index.source.html" class="el_package">com.swifteats.common.security</a> &gt; <span class="el_source">AdminApiKeyFilter.java</span></div><h1>AdminApiKeyFilter.java</h1><pre class="source lang-java linenums">package com.swifteats.common.security;
+
+import jakarta.servlet.FilterChain;
+import jakarta.servlet.ServletException;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.MediaType;
+import org.springframework.stereotype.Component;
+import org.springframework.web.filter.OncePerRequestFilter;
+
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+
+@Component
+public class AdminApiKeyFilter extends OncePerRequestFilter {
+
+    private static final String ADMIN_HEADER = &quot;X-Admin-Api-Key&quot;;
+
+    private final String adminApiKey;
+
+<span class="fc" id="L22">    public AdminApiKeyFilter(@Value(&quot;${swifteats.admin.api-key}&quot;) String adminApiKey) {</span>
+<span class="fc" id="L23">        this.adminApiKey = adminApiKey;</span>
+<span class="fc" id="L24">    }</span>
+
+    @Override
+    protected boolean shouldNotFilter(HttpServletRequest request) {
+<span class="fc" id="L28">        String path = request.getRequestURI();</span>
+<span class="pc bpc" id="L29" title="1 of 2 branches missed.">        return !path.startsWith(&quot;/api/v1/admin/&quot;);</span>
+    }
+
+    @Override
+    protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
+            throws ServletException, IOException {
+<span class="fc" id="L35">        String providedKey = request.getHeader(ADMIN_HEADER);</span>
+<span class="fc bfc" id="L36" title="All 2 branches covered.">        if (adminApiKey.equals(providedKey)) {</span>
+<span class="fc" id="L37">            filterChain.doFilter(request, response);</span>
+<span class="fc" id="L38">            return;</span>
+        }
+
+<span class="fc" id="L41">        response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);</span>
+<span class="fc" id="L42">        response.setContentType(MediaType.APPLICATION_JSON_VALUE);</span>
+<span class="fc" id="L43">        response.setCharacterEncoding(StandardCharsets.UTF_8.name());</span>
+<span class="fc" id="L44">        response.getWriter().write(&quot;&quot;&quot;</span>
+                {&quot;code&quot;:&quot;UNAUTHORIZED&quot;,&quot;message&quot;:&quot;Missing or invalid X-Admin-Api-Key&quot;}
+                &quot;&quot;&quot;);
+<span class="fc" id="L47">    }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.15.202606040825</span></div></body></html>

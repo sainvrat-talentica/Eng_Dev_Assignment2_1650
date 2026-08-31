@@ -1,0 +1,177 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>MenuCacheService.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">SwiftEats Platform Library</a> &gt; <a href="index.source.html" class="el_package">com.swifteats.restaurant.service</a> &gt; <span class="el_source">MenuCacheService.java</span></div><h1>MenuCacheService.java</h1><pre class="source lang-java linenums">package com.swifteats.restaurant.service;
+
+import com.swifteats.common.runtime.ServiceName;
+import com.swifteats.common.runtime.ServiceScope;
+
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.swifteats.restaurant.config.RestaurantProperties;
+import com.swifteats.restaurant.dto.RestaurantMenuResponse;
+import com.swifteats.restaurant.dto.RestaurantPageResponse;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.stereotype.Service;
+
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.time.Duration;
+import java.util.HexFormat;
+import java.util.Set;
+import java.util.UUID;
+
+@Service
+@ServiceScope({ServiceName.ENTITIES, ServiceName.ORDER, ServiceName.BACKEND})
+public class MenuCacheService {
+
+<span class="fc" id="L29">    private static final Logger log = LoggerFactory.getLogger(MenuCacheService.class);</span>
+    private static final String MENU_KEY_PREFIX = &quot;restaurant:&quot;;
+    private static final String MENU_KEY_SUFFIX = &quot;:menu&quot;;
+    private static final String LIST_KEY_PREFIX = &quot;restaurants:list:&quot;;
+
+    private final StringRedisTemplate redisTemplate;
+    private final ObjectMapper objectMapper;
+    private final RestaurantProperties properties;
+
+    public MenuCacheService(
+            @Autowired(required = false) StringRedisTemplate redisTemplate,
+            ObjectMapper objectMapper,
+<span class="fc" id="L41">            RestaurantProperties properties) {</span>
+<span class="fc" id="L42">        this.redisTemplate = redisTemplate;</span>
+<span class="fc" id="L43">        this.objectMapper = objectMapper;</span>
+<span class="fc" id="L44">        this.properties = properties;</span>
+<span class="fc" id="L45">    }</span>
+
+    public RestaurantMenuResponse getMenu(UUID restaurantId) {
+<span class="fc bfc" id="L48" title="All 2 branches covered.">        if (!isCacheAvailable()) {</span>
+<span class="fc" id="L49">            return null;</span>
+        }
+        try {
+<span class="fc" id="L52">            String cached = redisTemplate.opsForValue().get(menuKey(restaurantId));</span>
+<span class="fc bfc" id="L53" title="All 2 branches covered.">            if (cached == null) {</span>
+<span class="fc" id="L54">                return null;</span>
+            }
+<span class="fc" id="L56">            return objectMapper.readValue(cached, RestaurantMenuResponse.class);</span>
+<span class="fc" id="L57">        } catch (Exception ex) {</span>
+<span class="fc" id="L58">            log.warn(&quot;Redis menu cache read failed for {}: {}&quot;, restaurantId, ex.getMessage());</span>
+<span class="fc" id="L59">            return null;</span>
+        }
+    }
+
+    public void putMenu(UUID restaurantId, RestaurantMenuResponse response) {
+<span class="fc bfc" id="L64" title="All 2 branches covered.">        if (!isCacheAvailable()) {</span>
+<span class="fc" id="L65">            return;</span>
+        }
+        try {
+<span class="fc" id="L68">            redisTemplate.opsForValue().set(</span>
+<span class="fc" id="L69">                    menuKey(restaurantId),</span>
+<span class="fc" id="L70">                    objectMapper.writeValueAsString(response),</span>
+<span class="fc" id="L71">                    properties.getMenuCacheTtl());</span>
+<span class="nc" id="L72">        } catch (JsonProcessingException ex) {</span>
+<span class="nc" id="L73">            log.warn(&quot;Failed to serialize menu cache for {}: {}&quot;, restaurantId, ex.getMessage());</span>
+<span class="nc" id="L74">        } catch (Exception ex) {</span>
+<span class="nc" id="L75">            log.warn(&quot;Redis menu cache write failed for {}: {}&quot;, restaurantId, ex.getMessage());</span>
+<span class="pc" id="L76">        }</span>
+<span class="fc" id="L77">    }</span>
+
+    public RestaurantPageResponse getList(String cacheKeyHash) {
+<span class="pc bpc" id="L80" title="1 of 2 branches missed.">        if (!isCacheAvailable()) {</span>
+<span class="nc" id="L81">            return null;</span>
+        }
+        try {
+<span class="fc" id="L84">            String cached = redisTemplate.opsForValue().get(LIST_KEY_PREFIX + cacheKeyHash);</span>
+<span class="pc bpc" id="L85" title="1 of 2 branches missed.">            if (cached == null) {</span>
+<span class="nc" id="L86">                return null;</span>
+            }
+<span class="fc" id="L88">            return objectMapper.readValue(cached, RestaurantPageResponse.class);</span>
+<span class="fc" id="L89">        } catch (Exception ex) {</span>
+<span class="fc" id="L90">            log.warn(&quot;Redis list cache read failed: {}&quot;, ex.getMessage());</span>
+<span class="fc" id="L91">            return null;</span>
+        }
+    }
+
+    public void putList(String cacheKeyHash, RestaurantPageResponse response) {
+<span class="pc bpc" id="L96" title="1 of 2 branches missed.">        if (!isCacheAvailable()) {</span>
+<span class="nc" id="L97">            return;</span>
+        }
+        try {
+<span class="fc" id="L100">            redisTemplate.opsForValue().set(</span>
+                    LIST_KEY_PREFIX + cacheKeyHash,
+<span class="fc" id="L102">                    objectMapper.writeValueAsString(response),</span>
+<span class="fc" id="L103">                    properties.getListCacheTtl());</span>
+<span class="nc" id="L104">        } catch (JsonProcessingException ex) {</span>
+<span class="nc" id="L105">            log.warn(&quot;Failed to serialize list cache: {}&quot;, ex.getMessage());</span>
+<span class="nc" id="L106">        } catch (Exception ex) {</span>
+<span class="nc" id="L107">            log.warn(&quot;Redis list cache write failed: {}&quot;, ex.getMessage());</span>
+<span class="pc" id="L108">        }</span>
+<span class="fc" id="L109">    }</span>
+
+    public void invalidateMenu(UUID restaurantId) {
+<span class="pc bpc" id="L112" title="1 of 2 branches missed.">        if (!isCacheAvailable()) {</span>
+<span class="nc" id="L113">            return;</span>
+        }
+        try {
+<span class="fc" id="L116">            redisTemplate.delete(menuKey(restaurantId));</span>
+<span class="nc" id="L117">        } catch (Exception ex) {</span>
+<span class="nc" id="L118">            log.warn(&quot;Redis menu cache invalidation failed for {}: {}&quot;, restaurantId, ex.getMessage());</span>
+<span class="fc" id="L119">        }</span>
+<span class="fc" id="L120">    }</span>
+
+    public void invalidateListCaches() {
+<span class="pc bpc" id="L123" title="1 of 2 branches missed.">        if (!isCacheAvailable()) {</span>
+<span class="nc" id="L124">            return;</span>
+        }
+        try {
+<span class="fc" id="L127">            Set&lt;String&gt; keys = redisTemplate.keys(LIST_KEY_PREFIX + &quot;*&quot;);</span>
+<span class="pc bpc" id="L128" title="2 of 4 branches missed.">            if (keys != null &amp;&amp; !keys.isEmpty()) {</span>
+<span class="fc" id="L129">                redisTemplate.delete(keys);</span>
+            }
+<span class="nc" id="L131">        } catch (Exception ex) {</span>
+<span class="nc" id="L132">            log.warn(&quot;Redis list cache invalidation failed: {}&quot;, ex.getMessage());</span>
+<span class="fc" id="L133">        }</span>
+<span class="fc" id="L134">    }</span>
+
+    public String hashListQuery(
+            String city,
+            String cuisine,
+            Boolean isOpen,
+            java.math.BigDecimal minRating,
+            String name,
+            int page,
+            int size) {
+<span class="fc" id="L144">        String raw = String.join(&quot;|&quot;,</span>
+<span class="fc" id="L145">                nullSafe(city),</span>
+<span class="fc" id="L146">                nullSafe(cuisine),</span>
+<span class="pc bpc" id="L147" title="1 of 2 branches missed.">                isOpen == null ? &quot;&quot; : isOpen.toString(),</span>
+<span class="fc bfc" id="L148" title="All 2 branches covered.">                minRating == null ? &quot;&quot; : minRating.toPlainString(),</span>
+<span class="fc" id="L149">                nullSafe(name),</span>
+<span class="fc" id="L150">                Integer.toString(page),</span>
+<span class="fc" id="L151">                Integer.toString(size));</span>
+<span class="fc" id="L152">        return sha256(raw);</span>
+    }
+
+    private String menuKey(UUID restaurantId) {
+<span class="fc" id="L156">        return MENU_KEY_PREFIX + restaurantId + MENU_KEY_SUFFIX;</span>
+    }
+
+    private boolean isCacheAvailable() {
+<span class="fc bfc" id="L160" title="All 4 branches covered.">        return properties.isCacheEnabled() &amp;&amp; redisTemplate != null;</span>
+    }
+
+    private static String nullSafe(String value) {
+<span class="fc bfc" id="L164" title="All 2 branches covered.">        return value == null ? &quot;&quot; : value.trim().toLowerCase();</span>
+    }
+
+    private static String sha256(String input) {
+        try {
+<span class="fc" id="L169">            MessageDigest digest = MessageDigest.getInstance(&quot;SHA-256&quot;);</span>
+<span class="fc" id="L170">            byte[] hash = digest.digest(input.getBytes(StandardCharsets.UTF_8));</span>
+<span class="fc" id="L171">            return HexFormat.of().formatHex(hash);</span>
+<span class="nc" id="L172">        } catch (NoSuchAlgorithmException ex) {</span>
+<span class="nc" id="L173">            throw new IllegalStateException(&quot;SHA-256 not available&quot;, ex);</span>
+        }
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.15.202606040825</span></div></body></html>

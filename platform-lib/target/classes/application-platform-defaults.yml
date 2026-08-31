@@ -1,0 +1,117 @@
+spring:
+  http:
+    client:
+      factory: hc5
+  datasource:
+    url: jdbc:postgresql://${POSTGRES_HOST:localhost}:${POSTGRES_PORT:5432}/${POSTGRES_DB:swifteats}
+    username: ${POSTGRES_USER:swifteats}
+    password: ${POSTGRES_PASSWORD:swifteats}
+    hikari:
+      maximum-pool-size: 10
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+  rabbitmq:
+    host: ${RABBITMQ_HOST:localhost}
+    port: ${RABBITMQ_PORT:5672}
+    username: ${RABBITMQ_USER:guest}
+    password: ${RABBITMQ_PASSWORD:guest}
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+    consumer:
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
+      auto-offset-reset: earliest
+      properties:
+        spring.json.trusted.packages: com.swifteats.tracking.dto
+  flyway:
+    enabled: false
+    locations: classpath:db/migration
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        jdbc:
+          time_zone: UTC
+  task:
+    scheduling:
+      enabled: true
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html
+    tags-sorter: alpha
+    operations-sorter: method
+  show-actuator: false
+
+swifteats:
+  admin:
+    api-key: ${ADMIN_API_KEY:local-dev-admin-key-change-me}
+  internal:
+    api-key: ${INTERNAL_SERVICE_API_KEY:local-dev-internal-key-change-me}
+  security:
+    auth-enabled: ${SWIFTEATS_AUTH_ENABLED:true}
+    allow-insecure-defaults: ${SWIFTEATS_ALLOW_INSECURE_DEFAULTS:false}
+    gps-rate-limit-per-second: ${GPS_RATE_LIMIT_PER_SECOND:10}
+  restaurant:
+    cache-enabled: ${RESTAURANT_CACHE_ENABLED:true}
+    menu-cache-ttl: 10m
+    list-cache-ttl: 5m
+  analytics:
+    import-on-startup: ${ANALYTICS_IMPORT_ON_STARTUP:false}
+    demo-on-startup: ${ANALYTICS_DEMO_ON_STARTUP:false}
+    dataset-path: ${SWIFTEATS_DATASET_PATH:sample-data}
+    batch-size: 500
+  payment:
+    messaging-enabled: ${PAYMENT_MESSAGING_ENABLED:true}
+    mock-failure-rate: ${PAYMENT_MOCK_FAILURE_RATE:0.05}
+    mock-delay-ms: ${PAYMENT_MOCK_DELAY_MS:200}
+  refund:
+    mock-failure-rate: ${REFUND_MOCK_FAILURE_RATE:0.05}
+    mock-delay-ms: ${REFUND_MOCK_DELAY_MS:300}
+  outbox:
+    poll-interval-ms: 1000
+  tracking:
+    kafka-enabled: ${TRACKING_KAFKA_ENABLED:true}
+    gps-topic: gps.locations
+    location-cache-ttl: 30m
+    archive-sample-interval-sec: 30
+    sse-timeout-ms: 300000
+    sse-heartbeat-ms: 15000
+    simulator-enabled: ${GPS_SIMULATOR_ENABLED:false}
+    simulator-driver-count: ${GPS_SIMULATOR_DRIVER_COUNT:5}
+    simulator-interval-ms: ${GPS_SIMULATOR_INTERVAL_MS:5000}
+  gateway:
+    enabled: ${SWIFTEATS_GATEWAY_ENABLED:false}
+  services:
+    entities:
+      base-url: ${ENTITIES_SERVICE_URL:http://localhost:8081}
+    order:
+      base-url: ${ORDER_SERVICE_URL:http://localhost:8082}
+    payment:
+      base-url: ${PAYMENT_SERVICE_URL:http://localhost:8083}
+    refund:
+      base-url: ${REFUND_SERVICE_URL:http://localhost:8084}
+    analytics:
+      base-url: ${ANALYTICS_SERVICE_URL:http://localhost:8085}
+    backend:
+      base-url: ${BACKEND_SERVICE_URL:http://localhost:8080}
+
+logging:
+  level:
+    com.swifteats.analytics: INFO
+    com.swifteats.restaurant: INFO
+    com.swifteats.order: INFO
+    com.swifteats.tracking: INFO

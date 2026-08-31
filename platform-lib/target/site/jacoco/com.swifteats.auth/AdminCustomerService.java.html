@@ -1,0 +1,100 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>AdminCustomerService.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">SwiftEats Platform Library</a> &gt; <a href="index.source.html" class="el_package">com.swifteats.auth</a> &gt; <span class="el_source">AdminCustomerService.java</span></div><h1>AdminCustomerService.java</h1><pre class="source lang-java linenums">package com.swifteats.auth;
+
+import com.swifteats.auth.dto.AdminCustomerDetailResponse;
+import com.swifteats.auth.dto.AdminCustomerSummaryResponse;
+import com.swifteats.common.domain.CustomerStatus;
+import com.swifteats.common.exception.ResourceNotFoundException;
+import com.swifteats.common.runtime.ServiceName;
+import com.swifteats.common.runtime.ServiceScope;
+import com.swifteats.order.entity.Customer;
+import com.swifteats.order.repository.CustomerRepository;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.StringUtils;
+
+import java.util.List;
+import java.util.UUID;
+
+@Service
+@ServiceScope(ServiceName.BACKEND)
+public class AdminCustomerService {
+
+    private final CustomerRepository customerRepository;
+
+<span class="fc" id="L24">    public AdminCustomerService(CustomerRepository customerRepository) {</span>
+<span class="fc" id="L25">        this.customerRepository = customerRepository;</span>
+<span class="fc" id="L26">    }</span>
+
+    @Transactional(readOnly = true)
+    public List&lt;AdminCustomerSummaryResponse&gt; listForAdmin(String statusFilter) {
+<span class="fc" id="L30">        CustomerStatus status = parseStatusFilter(statusFilter);</span>
+<span class="fc bfc" id="L31" title="All 2 branches covered.">        List&lt;Customer&gt; customers = status == null</span>
+<span class="fc" id="L32">                ? customerRepository.findAllByOrderByCreatedAtDesc()</span>
+<span class="fc" id="L33">                : customerRepository.findByStatusOrderByCreatedAtDesc(status);</span>
+<span class="fc" id="L34">        return customers.stream().map(this::toSummary).toList();</span>
+    }
+
+    @Transactional(readOnly = true)
+    public AdminCustomerDetailResponse getForAdmin(UUID customerId) {
+<span class="fc" id="L39">        return toDetail(requireCustomer(customerId));</span>
+    }
+
+    @Transactional
+    public AdminCustomerDetailResponse updateStatus(UUID customerId, CustomerStatus status) {
+<span class="fc" id="L44">        Customer customer = requireCustomer(customerId);</span>
+<span class="fc bfc" id="L45" title="All 2 branches covered.">        if (customer.getStatus() == status) {</span>
+<span class="fc" id="L46">            return toDetail(customer);</span>
+        }
+<span class="fc" id="L48">        customer.setStatus(status);</span>
+<span class="pc bpc" id="L49" title="1 of 2 branches missed.">        if (status == CustomerStatus.SUSPENDED) {</span>
+<span class="fc" id="L50">            customer.setApiToken(null);</span>
+        }
+<span class="fc" id="L52">        return toDetail(customerRepository.save(customer));</span>
+    }
+
+    private Customer requireCustomer(UUID customerId) {
+<span class="fc" id="L56">        return customerRepository</span>
+<span class="fc" id="L57">                .findById(customerId)</span>
+<span class="fc" id="L58">                .orElseThrow(() -&gt; new ResourceNotFoundException(&quot;Customer not found&quot;));</span>
+    }
+
+    private AdminCustomerSummaryResponse toSummary(Customer customer) {
+<span class="fc" id="L62">        return new AdminCustomerSummaryResponse(</span>
+<span class="fc" id="L63">                customer.getId(),</span>
+<span class="fc" id="L64">                customer.getName(),</span>
+<span class="fc" id="L65">                customer.getEmail(),</span>
+<span class="fc" id="L66">                customer.getPhone(),</span>
+<span class="fc" id="L67">                customer.getCity(),</span>
+<span class="fc" id="L68">                customer.getStatus(),</span>
+<span class="fc" id="L69">                customer.getCreatedAt(),</span>
+<span class="fc" id="L70">                customer.getUpdatedAt());</span>
+    }
+
+    private AdminCustomerDetailResponse toDetail(Customer customer) {
+<span class="fc" id="L74">        return new AdminCustomerDetailResponse(</span>
+<span class="fc" id="L75">                customer.getId(),</span>
+<span class="fc" id="L76">                customer.getName(),</span>
+<span class="fc" id="L77">                customer.getEmail(),</span>
+<span class="fc" id="L78">                customer.getPhone(),</span>
+<span class="fc" id="L79">                customer.getAddressLine1(),</span>
+<span class="fc" id="L80">                customer.getAddressLine2(),</span>
+<span class="fc" id="L81">                customer.getCity(),</span>
+<span class="fc" id="L82">                customer.getState(),</span>
+<span class="fc" id="L83">                customer.getPincode(),</span>
+<span class="fc" id="L84">                customer.getStatus(),</span>
+<span class="fc" id="L85">                customer.getCreatedAt(),</span>
+<span class="fc" id="L86">                customer.getUpdatedAt());</span>
+    }
+
+    private static CustomerStatus parseStatusFilter(String statusFilter) {
+<span class="fc bfc" id="L90" title="All 2 branches covered.">        if (!StringUtils.hasText(statusFilter)) {</span>
+<span class="fc" id="L91">            return null;</span>
+        }
+        try {
+<span class="fc" id="L94">            return CustomerStatus.valueOf(statusFilter.trim().toUpperCase());</span>
+<span class="fc" id="L95">        } catch (IllegalArgumentException ex) {</span>
+<span class="fc" id="L96">            throw new IllegalArgumentException(&quot;Invalid status filter: &quot; + statusFilter);</span>
+        }
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.15.202606040825</span></div></body></html>

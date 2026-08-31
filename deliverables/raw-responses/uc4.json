@@ -1,0 +1,22 @@
+{
+    "cityA": "Pune",
+    "cityB": "Mumbai",
+    "month": "2025-08",
+    "cityAFailures": {
+        "Incorrect address": 6,
+        "Stockout": 5,
+        "Weather disruption": 3,
+        "Warehouse delay": 2
+    },
+    "cityBFailures": {
+        "Stockout": 7,
+        "Warehouse delay": 4,
+        "Weather disruption": 4,
+        "Incorrect address": 2,
+        "Traffic congestion": 2
+    },
+    "narrative": "During 2025-08, Pune had 16 failed deliveries (top cause: Incorrect address) while Mumbai had 19 (top cause: Stockout). Compare operational focus: address verification in cities with high incorrect-address rates, and warehouse staffing where warehouse-delay failures dominate.",
+    "recommendations": [
+        "Mandatory address pin validation before dispatch."
+    ]
+}

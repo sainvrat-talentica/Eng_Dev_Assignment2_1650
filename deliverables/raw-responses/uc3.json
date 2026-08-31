@@ -1,0 +1,22 @@
+{
+    "warehouseId": 2,
+    "warehouseName": "Warehouse 2",
+    "month": 8,
+    "year": 2025,
+    "totalFailed": 6,
+    "failureReasonCounts": {
+        "Weather disruption": 3,
+        "Warehouse delay": 2,
+        "Stockout": 1
+    },
+    "warehouseNoteCounts": {
+        "System issue": 5,
+        "Slow packing": 1
+    },
+    "narrative": "Warehouse Warehouse 2 (id 2) had 6 failed orders in 2025-08. Leading failure reason: Weather disruption. Warehouse log patterns: System issue (5), Slow packing (1).",
+    "recommendations": [
+        "Add packing staff at Warehouse 2 during peak hours.",
+        "Pause SLA clock during severe weather and pre-position drivers beforehand.",
+        "Pre-scale warehouse capacity by 15% and add a 15% driver buffer before festival peaks."
+    ]
+}

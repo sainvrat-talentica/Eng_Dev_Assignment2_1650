@@ -1,0 +1,32 @@
+{
+    "clientId": 337,
+    "from": "2025-01-01T00:00:00Z",
+    "to": "2025-12-31T00:00:00Z",
+    "totalFailed": 6,
+    "breakdown": [
+        {
+            "failureReason": "Stockout",
+            "count": 3,
+            "fleetIssues": "Heavy congestion",
+            "warehouseIssues": "Stock delay on item"
+        },
+        {
+            "failureReason": "Traffic congestion",
+            "count": 3,
+            "fleetIssues": "Breakdown",
+            "warehouseIssues": "Stock delay on item, System issue"
+        },
+        {
+            "failureReason": "Warehouse delay",
+            "count": 2,
+            "fleetIssues": "Address not found",
+            "warehouseIssues": "System issue"
+        }
+    ],
+    "narrative": "Client Ramesh-Choudhary (id 337) recorded 6 failed orders from 2025-01-01T00:00:00Z to 2025-12-31T00:00:00Z. Primary failure reason: Stockout (3 orders). Fleet issues noted: Heavy congestion. Warehouse issues: Stock delay on item.",
+    "recommendations": [
+        "Enable real-time inventory sync and low-stock alerts at affected warehouses.",
+        "Pre-scale warehouse capacity by 15% and add a 15% driver buffer before festival peaks.",
+        "Add packing staff at the warehouse during peak hours."
+    ]
+}

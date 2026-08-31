@@ -1,0 +1,19 @@
+spring:
+  application:
+    name: analytics-service
+  config:
+    import: optional:classpath:application-platform-defaults.yml
+  flyway:
+    enabled: false
+
+server:
+  port: 8080
+
+swifteats:
+  service:
+    name: ANALYTICS
+  services:
+    order:
+      base-url: ${ORDER_SERVICE_URL:http://order-service:8082}
+    payment:
+      base-url: ${PAYMENT_SERVICE_URL:http://payment-service:8083}

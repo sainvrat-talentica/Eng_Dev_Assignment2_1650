@@ -1,0 +1,132 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>GatewayProxyFilter.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">SwiftEats Platform Library</a> &gt; <a href="index.source.html" class="el_package">com.swifteats.gateway</a> &gt; <span class="el_source">GatewayProxyFilter.java</span></div><h1>GatewayProxyFilter.java</h1><pre class="source lang-java linenums">package com.swifteats.gateway;
+
+import com.swifteats.common.runtime.ServiceName;
+import com.swifteats.common.runtime.ServiceScope;
+import com.swifteats.gateway.config.ServiceRegistryProperties;
+import jakarta.servlet.FilterChain;
+import jakarta.servlet.ServletException;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.core.Ordered;
+import org.springframework.core.annotation.Order;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
+import org.springframework.http.ResponseEntity;
+import org.springframework.stereotype.Component;
+import org.springframework.util.StreamUtils;
+import org.springframework.web.client.RestClient;
+import org.springframework.web.filter.OncePerRequestFilter;
+
+import java.io.IOException;
+import java.util.Enumeration;
+import java.util.Set;
+
+@Component
+@Order(Ordered.LOWEST_PRECEDENCE)
+@ConditionalOnProperty(name = &quot;swifteats.gateway.enabled&quot;, havingValue = &quot;true&quot;)
+@ServiceScope(ServiceName.BACKEND)
+public class GatewayProxyFilter extends OncePerRequestFilter {
+
+<span class="fc" id="L31">    private static final Set&lt;String&gt; HOP_BY_HOP = Set.of(</span>
+            &quot;connection&quot;, &quot;keep-alive&quot;, &quot;proxy-authenticate&quot;, &quot;proxy-authorization&quot;,
+            &quot;te&quot;, &quot;trailers&quot;, &quot;transfer-encoding&quot;, &quot;upgrade&quot;, &quot;host&quot;, &quot;content-length&quot;);
+
+    private final RestClient restClient;
+    private final ServiceRegistryProperties registry;
+
+<span class="fc" id="L38">    public GatewayProxyFilter(RestClient.Builder restClientBuilder, ServiceRegistryProperties registry) {</span>
+<span class="fc" id="L39">        this.restClient = restClientBuilder.build();</span>
+<span class="fc" id="L40">        this.registry = registry;</span>
+<span class="fc" id="L41">    }</span>
+
+    @Override
+    protected boolean shouldNotFilter(HttpServletRequest request) {
+<span class="fc" id="L45">        String path = request.getRequestURI();</span>
+<span class="fc bfc" id="L46" title="All 2 branches covered.">        if (!path.startsWith(&quot;/api/v1/&quot;)) {</span>
+<span class="fc" id="L47">            return true;</span>
+        }
+<span class="fc bfc" id="L49" title="All 2 branches covered.">        if (path.startsWith(&quot;/api/v1/auth&quot;)</span>
+<span class="fc bfc" id="L50" title="All 2 branches covered.">                || path.startsWith(&quot;/api/v1/admin/customers&quot;)</span>
+<span class="fc bfc" id="L51" title="All 2 branches covered.">                || path.startsWith(&quot;/api/v1/restaurants&quot;)</span>
+<span class="fc bfc" id="L52" title="All 2 branches covered.">                || path.startsWith(&quot;/api/v1/drivers&quot;)</span>
+<span class="fc bfc" id="L53" title="All 2 branches covered.">                || path.contains(&quot;/tracking&quot;)) {</span>
+<span class="fc" id="L54">            return true;</span>
+        }
+<span class="fc bfc" id="L56" title="All 2 branches covered.">        return !(path.startsWith(&quot;/api/v1/admin/restaurants&quot;)</span>
+<span class="fc bfc" id="L57" title="All 2 branches covered.">                || path.startsWith(&quot;/api/v1/admin/orders&quot;)</span>
+<span class="fc bfc" id="L58" title="All 2 branches covered.">                || path.startsWith(&quot;/api/v1/admin/analytics&quot;)</span>
+<span class="fc bfc" id="L59" title="All 2 branches covered.">                || path.startsWith(&quot;/api/v1/orders&quot;)</span>
+<span class="fc bfc" id="L60" title="All 2 branches covered.">                || path.startsWith(&quot;/api/v1/payments&quot;)</span>
+<span class="fc bfc" id="L61" title="All 2 branches covered.">                || path.startsWith(&quot;/api/v1/refunds&quot;)</span>
+<span class="pc bpc" id="L62" title="1 of 2 branches missed.">                || path.startsWith(&quot;/api/v1/analytics&quot;));</span>
+    }
+
+    @Override
+    protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
+            throws ServletException, IOException {
+<span class="fc" id="L68">        String path = request.getRequestURI();</span>
+<span class="fc" id="L69">        String targetBase = resolveTarget(path);</span>
+<span class="fc bfc" id="L70" title="All 2 branches covered.">        if (targetBase == null) {</span>
+<span class="fc" id="L71">            filterChain.doFilter(request, response);</span>
+<span class="fc" id="L72">            return;</span>
+        }
+
+<span class="fc" id="L75">        String query = request.getQueryString();</span>
+<span class="fc bfc" id="L76" title="All 2 branches covered.">        String targetUrl = targetBase + path + (query != null ? &quot;?&quot; + query : &quot;&quot;);</span>
+<span class="fc" id="L77">        HttpMethod method = HttpMethod.valueOf(request.getMethod());</span>
+<span class="fc" id="L78">        byte[] body = StreamUtils.copyToByteArray(request.getInputStream());</span>
+
+<span class="fc" id="L80">        RestClient.RequestBodySpec spec = restClient.method(method).uri(targetUrl);</span>
+<span class="fc" id="L81">        copyHeaders(request, spec);</span>
+<span class="fc bfc" id="L82" title="All 2 branches covered.">        ResponseEntity&lt;byte[]&gt; upstream = (body.length == 0 ? spec : spec.body(body))</span>
+<span class="fc" id="L83">                .retrieve()</span>
+<span class="fc" id="L84">                .toEntity(byte[].class);</span>
+
+<span class="fc" id="L86">        response.setStatus(upstream.getStatusCode().value());</span>
+<span class="fc" id="L87">        upstream.getHeaders().forEach((name, values) -&gt; {</span>
+<span class="pc bpc" id="L88" title="1 of 2 branches missed.">            if (!HOP_BY_HOP.contains(name.toLowerCase())) {</span>
+<span class="fc bfc" id="L89" title="All 2 branches covered.">                for (String value : values) {</span>
+<span class="fc" id="L90">                    response.addHeader(name, value);</span>
+<span class="fc" id="L91">                }</span>
+            }
+<span class="fc" id="L93">        });</span>
+<span class="pc bpc" id="L94" title="1 of 2 branches missed.">        if (upstream.getBody() != null) {</span>
+<span class="fc" id="L95">            response.getOutputStream().write(upstream.getBody());</span>
+        }
+<span class="fc" id="L97">    }</span>
+
+    private String resolveTarget(String path) {
+<span class="fc bfc" id="L100" title="All 2 branches covered.">        if (path.startsWith(&quot;/api/v1/admin/restaurants&quot;)) {</span>
+<span class="fc" id="L101">            return registry.getEntities().getBaseUrl();</span>
+        }
+<span class="fc bfc" id="L103" title="All 4 branches covered.">        if (path.startsWith(&quot;/api/v1/admin/orders&quot;) || path.startsWith(&quot;/api/v1/orders&quot;)) {</span>
+<span class="fc" id="L104">            return registry.getOrder().getBaseUrl();</span>
+        }
+<span class="fc bfc" id="L106" title="All 2 branches covered.">        if (path.startsWith(&quot;/api/v1/payments&quot;)) {</span>
+<span class="fc" id="L107">            return registry.getPayment().getBaseUrl();</span>
+        }
+<span class="fc bfc" id="L109" title="All 2 branches covered.">        if (path.startsWith(&quot;/api/v1/refunds&quot;)) {</span>
+<span class="fc" id="L110">            return registry.getRefund().getBaseUrl();</span>
+        }
+<span class="fc bfc" id="L112" title="All 4 branches covered.">        if (path.startsWith(&quot;/api/v1/analytics&quot;) || path.startsWith(&quot;/api/v1/admin/analytics&quot;)) {</span>
+<span class="fc" id="L113">            return registry.getAnalytics().getBaseUrl();</span>
+        }
+<span class="fc" id="L115">        return null;</span>
+    }
+
+    private void copyHeaders(HttpServletRequest request, RestClient.RequestBodySpec spec) {
+<span class="fc" id="L119">        Enumeration&lt;String&gt; headerNames = request.getHeaderNames();</span>
+<span class="fc bfc" id="L120" title="All 2 branches covered.">        while (headerNames.hasMoreElements()) {</span>
+<span class="fc" id="L121">            String name = headerNames.nextElement();</span>
+<span class="pc bpc" id="L122" title="1 of 2 branches missed.">            if (HOP_BY_HOP.contains(name.toLowerCase())) {</span>
+<span class="nc" id="L123">                continue;</span>
+            }
+<span class="fc" id="L125">            Enumeration&lt;String&gt; values = request.getHeaders(name);</span>
+<span class="fc bfc" id="L126" title="All 2 branches covered.">            while (values.hasMoreElements()) {</span>
+<span class="fc" id="L127">                spec.header(name, values.nextElement());</span>
+            }
+<span class="fc" id="L129">        }</span>
+<span class="fc" id="L130">    }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.15.202606040825</span></div></body></html>

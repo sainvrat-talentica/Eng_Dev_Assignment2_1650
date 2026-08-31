@@ -1,0 +1,17 @@
+spring:
+  application:
+    name: analytics-service
+  flyway:
+    enabled: false
+
+server:
+  port: 8085
+
+swifteats:
+  service:
+    name: ANALYTICS
+  services:
+    order:
+      base-url: ${ORDER_SERVICE_URL:http://order-service:8082}
+    payment:
+      base-url: ${PAYMENT_SERVICE_URL:http://payment-service:8083}

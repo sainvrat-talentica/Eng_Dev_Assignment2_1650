@@ -1,0 +1,18 @@
+{
+    "city": "Pune",
+    "date": "2025-06-06",
+    "totalAffected": 5,
+    "failureReasonCounts": {
+        "Unknown": 4,
+        "Stockout": 1
+    },
+    "heavyTrafficCount": 2,
+    "slowPackingCount": 1,
+    "negativeFeedbackCount": 3,
+    "narrative": "In Pune on 2025-06-06, 5 deliveries were delayed or failed. Top cause: Unknown (80% of affected orders). 2 orders correlated with heavy traffic and 1 with slow warehouse packing. 3 customers left negative feedback mentioning lateness or service issues.",
+    "recommendations": [
+        "Review end-to-end SLA checkpoints from kitchen dispatch to last-mile handoff.",
+        "Pre-scale warehouse capacity by 15% and add a 15% driver buffer before festival peaks.",
+        "Enable real-time inventory sync and low-stock alerts at affected warehouses."
+    ]
+}
